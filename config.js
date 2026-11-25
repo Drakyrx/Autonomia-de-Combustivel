@@ -1,5 +1,5 @@
 // Credenciais públicas (chave publishable) do Supabase. Nunca coloque aqui a service_role key.
 window.AUTONOMIA_CONFIG = {
-  supabaseUrl: "https://iudtysyjcfegflmcdmvq.supabase.co",
-  supabaseAnonKey: "sb_publishable_UE6MsEWQrLuH9Ok7aRKF2A_Wuuuo2W7",
+  supabaseUrl: "https://xbwlfflcbbqqcupzdmoc.supabase.co",
+  supabaseAnonKey: "sb_publishable_BMyYiWOnVHECLjbll9RM2A_ID4GYVIq",
 };
