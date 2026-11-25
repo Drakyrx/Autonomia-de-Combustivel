@@ -26,6 +26,10 @@ create index if not exists fuel_refuels_vehicle_odo on public.fuel_refuels (vehi
 alter table public.fuel_vehicles enable row level security;
 alter table public.fuel_refuels enable row level security;
 
+grant usage on schema public to authenticated;
+grant select, insert, update, delete on public.fuel_vehicles to authenticated;
+grant select, insert, update, delete on public.fuel_refuels to authenticated;
+
 drop policy if exists "fuel_vehicles_own" on public.fuel_vehicles;
 create policy "fuel_vehicles_own" on public.fuel_vehicles
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
