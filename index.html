@@ -1,0 +1,859 @@
+﻿<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Autonomia de Combustível</title>
+<meta name="theme-color" content="#2a78d6">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<style>
+:root{
+  --bg:#f4f6fb;--card:#ffffff;--text:#1c2430;--muted:#6b7686;--border:#e3e8f0;
+  --accent:#2a78d6;--good:#006300;--bad:#c2410c;--radius:16px;
+  --shadow:0 1px 2px rgba(16,24,40,.06),0 4px 16px rgba(16,24,40,.06);
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#0d0d0d;--card:#1a1a19;--text:#f0efec;--muted:#c3c2b7;--border:#2c2c2a;--accent:#3987e5;--good:#0ca30c;--bad:#ec835a;--shadow:none}
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--text)}
+header{background:linear-gradient(135deg,#2a78d6,#184f95);color:#fff;padding:18px 20px;display:flex;align-items:center;gap:12px}
+header img{width:44px;height:44px;flex-shrink:0;border-radius:12px}
+header h1{margin:0;font-size:1.15rem;font-weight:700}
+main{max-width:960px;margin:0 auto;padding:16px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-bottom:16px;box-shadow:var(--shadow)}
+h2{font-size:1rem;margin:0 0 12px}
+h3{font-size:.95rem;margin:0 0 10px;font-weight:600}
+label{display:block;font-size:.85rem;color:var(--muted);margin-bottom:10px}
+input,select{width:100%;padding:11px;border:1px solid var(--border);border-radius:10px;font-size:1rem;margin-top:4px;background:var(--card);color:var(--text)}
+button{background:var(--accent);color:#fff;border:0;border-radius:10px;padding:11px 16px;font-size:1rem;cursor:pointer;width:100%;font-weight:600}
+button.secondary{background:transparent;color:var(--accent);border:1px solid var(--accent);width:auto;padding:8px 14px;font-size:.9rem}
+button.perigo{background:transparent;color:var(--bad);border:1px solid var(--bad);width:auto;padding:8px 14px;font-size:.9rem}
+button.link{background:none;color:var(--accent);width:auto;padding:0;font-weight:500}
+button.link.perigo-link{color:var(--bad)}
+button.google{background:var(--card);color:var(--text);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;gap:10px;width:100%}
+.divisor{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:.85rem;margin:14px 0}
+.divisor::before,.divisor::after{content:"";flex:1;height:1px;background:var(--border)}
+button:disabled{opacity:.6;cursor:default}
+.muted{color:var(--muted)}
+.row{display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.acoes{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+.acoes button{flex:1;min-width:110px}
+.msg{font-size:.9rem;margin-top:8px;color:var(--bad)}
+.hidden{display:none!important}
+
+/* Seletor de veículo */
+.seletor{width:auto;min-width:220px;margin:0;font-weight:600;font-size:1.05rem}
+button.lancar{width:auto;padding:8px 14px;font-size:.9rem}
+
+/* Diálogo de novo abastecimento */
+dialog{background:var(--card);color:var(--text);border:1px solid var(--border);border-radius:var(--radius);padding:18px;width:min(420px,calc(100% - 32px));max-height:90vh;overflow-y:auto;box-shadow:var(--shadow)}
+dialog::backdrop{background:rgba(0,0,0,.45)}
+dialog.dlg-largo{width:min(760px,calc(100% - 32px))}
+
+/* Destaque */
+.hero{background:linear-gradient(135deg,rgba(42,120,214,.12),rgba(42,120,214,0));}
+.hero .rotulo{font-size:.8rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.hero .valor{font-size:2.6rem;font-weight:800;line-height:1.1;margin:4px 0}
+.hero .valor small{font-size:1rem;font-weight:600;color:var(--muted);margin-left:4px}
+.chip{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:5px 12px;font-size:.85rem;font-weight:600;border:1px solid currentColor}
+.chip.bom{color:var(--good)}
+.chip.ruim{color:var(--bad)}
+.chip.neutro{color:var(--muted)}
+.barra{height:10px;background:var(--border);border-radius:999px;overflow:hidden;margin-top:14px}
+.barra div{height:100%;background:var(--accent);border-radius:999px;transition:width .4s}
+.barra-legenda{font-size:.8rem;color:var(--muted);margin-top:6px}
+
+/* Indicadores */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px;box-shadow:var(--shadow)}
+.kpi span{display:block;font-size:.78rem;color:var(--muted);margin-bottom:4px}
+.kpi strong{font-size:1.25rem;font-weight:700}
+.kpi small{color:var(--muted);margin-left:4px}
+
+/* Gráficos */
+.graficos{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;margin-bottom:16px}
+.graficos .card{margin-bottom:0}
+.caixa{position:relative;height:240px}
+.vazio{color:var(--muted);font-size:.9rem;text-align:center;padding:90px 0}
+
+table{width:100%;border-collapse:collapse;font-size:.9rem}
+th,td{text-align:left;padding:9px 4px;border-bottom:1px solid var(--border)}
+th.num,td.num{text-align:right}
+.tabela-scroll{overflow-x:auto}
+.melhor{color:var(--good);font-weight:700}
+.destaque-comb{margin:0 0 12px;font-size:.95rem;font-weight:600}
+</style>
+</head>
+<body>
+<header><img src="icon.svg" alt=""><h1>Autonomia de Combustível</h1></header>
+<main>
+  <div id="configAlert" class="card hidden">Configure o arquivo <b>config.js</b> com a URL e a chave do Supabase.</div>
+
+  <section id="authView" class="card hidden">
+    <h2 id="authTitle">Entrar</h2>
+    <form id="authForm">
+      <div id="signupFields" class="hidden">
+        <label>Nome do veículo<input id="veiculoCad" placeholder="Ex.: Gol 2018"></label>
+        <label>Capacidade do tanque (litros)<input id="capacidadeCad" type="number" step="0.1" min="1" inputmode="decimal"></label>
+      </div>
+      <label>E-mail<input id="email" type="email" autocomplete="email" required></label>
+      <label>Senha<input id="senha" type="password" minlength="6" autocomplete="current-password" required></label>
+      <button type="submit" id="authBtn">Entrar</button>
+    </form>
+    <div class="divisor"><span>ou</span></div>
+    <button type="button" class="google" id="loginGoogle">
+      <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.5l6.7-6.7C35.6 2.4 30.1 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.8 6C12.3 13.3 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8c4.4-4 7.1-10 7.1-17.5z"/><path fill="#FBBC05" d="M10.4 28.8c-.5-1.4-.8-2.9-.8-4.8s.3-3.4.8-4.8l-7.8-6C.9 16.5 0 20.1 0 24s.9 7.5 2.6 10.8l7.8-6z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.5-5.8c-2.1 1.4-4.8 2.3-8.4 2.3-6.3 0-11.7-3.8-13.6-9.3l-7.8 6C6.5 42.6 14.6 48 24 48z"/></svg>
+      Entrar com Google
+    </button>
+    <p class="row" style="margin-top:12px"><span id="authSwitchText" class="muted"></span><button type="button" class="link" id="authSwitch"></button></p>
+    <div id="authMsg" class="msg"></div>
+  </section>
+
+  <section id="profileView" class="card hidden">
+    <h2 id="perfilTitulo">Novo veículo</h2>
+    <form id="profileForm">
+      <input type="hidden" id="veiculoId">
+      <label>Nome do veículo<input id="veiculo" placeholder="Ex.: Gol 2018" required></label>
+      <label>Capacidade do tanque (litros)<input id="capacidade" type="number" step="0.1" min="1" inputmode="decimal" required></label>
+      <div class="acoes">
+        <button type="submit">Salvar</button>
+        <button type="button" class="secondary hidden" id="profileCancel">Voltar</button>
+        <button type="button" class="perigo hidden" id="excluirVeiculo">Excluir veículo</button>
+      </div>
+    </form>
+    <div id="profileMsg" class="msg"></div>
+  </section>
+
+  <section id="appView" class="hidden">
+    <div class="row" style="margin-bottom:12px">
+      <select id="seletorVeiculo" class="seletor" aria-label="Veículo"></select>
+      <div class="row">
+        <button type="button" class="lancar" id="abrirLancamento">+ Abastecimento</button>
+        <button type="button" class="secondary" id="abrirHistorico">Ver histórico</button>
+        <button type="button" class="secondary" id="novoVeiculoBtn">+ Veículo</button>
+        <button type="button" class="secondary" id="editarBtn">Editar</button>
+        <button type="button" class="secondary" id="logoutBtn">Sair</button>
+      </div>
+    </div>
+
+    <div class="card hero">
+      <div class="rotulo">Autonomia média por tanque</div>
+      <div class="valor" id="heroAut">—</div>
+      <div class="row">
+        <span class="chip neutro" id="heroDelta">Registre abastecimentos com litros</span>
+        <span class="muted" id="heroCap"></span>
+      </div>
+      <div class="barra"><div id="heroBarra" style="width:0%"></div></div>
+      <div class="barra-legenda" id="heroBarraLegenda"></div>
+    </div>
+
+    <div class="card">
+      <h2>Comparativo por combustível</h2>
+      <p id="recomendacaoComb" class="destaque-comb"></p>
+      <div class="tabela-scroll">
+        <table>
+          <thead>
+            <tr><th>Combustível</th><th class="num">Abastec.</th><th class="num">km/L</th><th class="num">Autonomia</th><th class="num">Custo/km</th></tr>
+          </thead>
+          <tbody id="comparativoComb"></tbody>
+        </table>
+      </div>
+      <p class="muted" style="font-size:.8rem;margin:10px 0 0">Custo/km = valor do abastecimento ÷ km desde o abastecimento anterior.</p>
+    </div>
+
+    <div class="kpis">
+      <div class="kpi"><span>Melhor autonomia</span><strong id="kMelhor">—</strong></div>
+      <div class="kpi"><span>Consumo médio</span><strong id="kConsumo">—</strong><small>km/L</small></div>
+      <div class="kpi"><span>Custo médio por km</span><strong id="kCustoKm">—</strong></div>
+      <div class="kpi"><span>Gasto no mês</span><strong id="kMes">—</strong></div>
+      <div class="kpi"><span>Gasto total</span><strong id="kTotal">—</strong></div>
+      <div class="kpi"><span>Km rodados</span><strong id="kKm">—</strong></div>
+    </div>
+
+    <div class="graficos">
+      <div class="card">
+        <h3>Autonomia por abastecimento (km)</h3>
+        <div class="caixa"><canvas id="cAutonomia"></canvas></div>
+        <p class="vazio hidden" id="vAutonomia">Precisa de pelo menos 2 abastecimentos com litros.</p>
+      </div>
+      <div class="card">
+        <h3>Consumo por abastecimento (km/L)</h3>
+        <div class="caixa"><canvas id="cConsumo"></canvas></div>
+        <p class="vazio hidden" id="vConsumo">Ainda não há consumo calculado.</p>
+      </div>
+      <div class="card">
+        <h3>Gasto por mês (R$)</h3>
+        <div class="caixa"><canvas id="cMensal"></canvas></div>
+        <p class="vazio hidden" id="vMensal">Nenhum abastecimento registrado.</p>
+      </div>
+      <div class="card">
+        <h3>Gasto por combustível (R$)</h3>
+        <div class="caixa"><canvas id="cCombustivel"></canvas></div>
+        <p class="vazio hidden" id="vCombustivel">Nenhum abastecimento registrado.</p>
+      </div>
+    </div>
+
+  </section>
+</main>
+
+<dialog id="dlgHistorico" class="dlg-largo">
+  <div class="row" style="margin-bottom:12px">
+    <h2 style="margin:0">Histórico</h2>
+    <button type="button" class="secondary" id="fecharHistorico">Fechar</button>
+  </div>
+  <div class="tabela-scroll">
+    <table>
+      <thead>
+        <tr><th>Data</th><th>Comb.</th><th class="num">Litros</th><th class="num">Km</th><th class="num">km/L</th><th class="num">Autonomia</th><th></th></tr>
+      </thead>
+      <tbody id="historico"></tbody>
+    </table>
+  </div>
+  <p id="semRegistros" class="muted">Nenhum abastecimento registrado.</p>
+</dialog>
+
+<dialog id="dlgAbastecimento">
+  <h2 id="tituloAbastecimento">Novo abastecimento</h2>
+  <form id="refuelForm">
+    <input type="hidden" id="refuelId">
+    <label>Veículo
+      <select id="seletorLancamento" required aria-label="Veículo do abastecimento"></select>
+    </label>
+    <label>Data<input id="data" type="date" required></label>
+    <label>Combustível
+      <select id="combustivel" required>
+        <option>Gasolina Comum</option>
+        <option>Gasolina Aditivada</option>
+        <option>Etanol</option>
+        <option>Diesel</option>
+      </select>
+    </label>
+    <label>Valor total (R$)<input id="valor" type="number" step="0.01" min="0.01" inputmode="decimal" required></label>
+    <label>Preço por litro (R$) <span class="muted">(opcional)</span><input id="precoLitro" type="number" step="0.001" min="0.001" inputmode="decimal"></label>
+    <label>Litros <span class="muted">(opcional, se não informar o preço por litro)</span><input id="litros" type="number" step="0.001" min="0.001" inputmode="decimal"></label>
+    <label>Odômetro (km)<input id="odometro" type="number" step="1" min="0" inputmode="numeric" required></label>
+    <p id="litrosCalc" class="muted" style="margin:0 0 12px"></p>
+    <div class="acoes">
+      <button type="button" class="secondary" id="cancelarLancamento">Cancelar</button>
+      <button type="submit" id="salvarAbastecimento">Salvar abastecimento</button>
+    </div>
+  </form>
+  <div id="refuelMsg" class="msg"></div>
+</dialog>
+
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="config.js"></script>
+<script>
+const $ = (id) => document.getElementById(id);
+const cfg = window.AUTONOMIA_CONFIG || {};
+const configOk = /^https:\/\/.+\.supabase\.co$/i.test(cfg.supabaseUrl || "") && Boolean(cfg.supabaseAnonKey) && Boolean(window.supabase);
+const db = configOk ? window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey) : null;
+const PENDENTE = "autonomia.pendente";
+const VEICULO_ATIVO = "autonomia.veiculoAtivo";
+const COMBUSTIVEIS = ["Gasolina Comum", "Gasolina Aditivada", "Etanol", "Diesel"];
+
+let modoCadastro = false;
+let user = null;
+let veiculos = [];
+let veiculoAtivoId = null;
+let abastecimentos = [];
+let graficos = {};
+
+const fmt = (n, d = 1) => Number(n).toLocaleString("pt-BR", { minimumFractionDigits: d, maximumFractionDigits: d });
+const brl = (n) => Number(n).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const formatarData = (s) => s.split("-").reverse().join("/");
+const hoje = () => new Date().toISOString().slice(0, 10);
+const media = (arr) => (arr.length ? arr.reduce((s, v) => s + v, 0) / arr.length : null);
+const veiculoAtual = () => veiculos.find((v) => v.id === veiculoAtivoId) || null;
+
+function setView(view) {
+  $("authView").classList.toggle("hidden", view !== "auth");
+  $("profileView").classList.toggle("hidden", view !== "profile");
+  $("appView").classList.toggle("hidden", view !== "app");
+}
+
+/* ---------- Autenticação ---------- */
+
+function setModo(cadastro) {
+  modoCadastro = cadastro;
+  $("signupFields").classList.toggle("hidden", !cadastro);
+  $("veiculoCad").required = cadastro;
+  $("capacidadeCad").required = cadastro;
+  $("authTitle").textContent = cadastro ? "Criar conta" : "Entrar";
+  $("authBtn").textContent = cadastro ? "Criar conta" : "Entrar";
+  $("authSwitchText").textContent = cadastro ? "Já tem conta?" : "Não tem conta?";
+  $("authSwitch").textContent = cadastro ? "Entrar" : "Criar conta";
+  $("authMsg").textContent = "";
+}
+$("authSwitch").onclick = () => setModo(!modoCadastro);
+
+$("authForm").onsubmit = async (e) => {
+  e.preventDefault();
+  const email = $("email").value.trim();
+  const senha = $("senha").value;
+  $("authMsg").textContent = "";
+  $("authBtn").disabled = true;
+  try {
+    if (modoCadastro) {
+      const capacidade = Number($("capacidadeCad").value);
+      if (!(capacidade > 0)) throw new Error("Informe a capacidade do tanque.");
+      // Guarda o primeiro veículo: é gravado assim que a sessão existir (inclusive após confirmar o e-mail).
+      localStorage.setItem(PENDENTE, JSON.stringify({ veiculo: $("veiculoCad").value.trim(), capacidade }));
+      const { data, error } = await db.auth.signUp({ email, password: senha });
+      if (error) { localStorage.removeItem(PENDENTE); throw error; }
+      if (!data.session) $("authMsg").textContent = "Conta criada. Confirme o e-mail e depois entre.";
+    } else {
+      const { error } = await db.auth.signInWithPassword({ email, password: senha });
+      if (error) throw error;
+    }
+  } catch (err) {
+    $("authMsg").textContent = err.message || "Não foi possível concluir.";
+  } finally {
+    $("authBtn").disabled = false;
+  }
+};
+
+$("logoutBtn").onclick = async () => { await db.auth.signOut(); };
+
+// Mesmo fluxo do Trilha de Carreira: volta para esta mesma página após o login no Google.
+$("loginGoogle").onclick = async () => {
+  $("authMsg").textContent = "";
+  const { error } = await db.auth.signInWithOAuth({
+    provider: "google",
+    options: { redirectTo: `${location.origin}${location.pathname}` },
+  });
+  if (error) $("authMsg").textContent = "Não foi possível entrar com o Google: " + error.message;
+};
+
+/* ---------- Sessão e dados ---------- */
+
+async function carregarSessao(session) {
+  user = session?.user || null;
+  if (!user) { veiculos = []; veiculoAtivoId = null; abastecimentos = []; setView("auth"); return; }
+
+  try {
+    const pend = JSON.parse(localStorage.getItem(PENDENTE) || "null");
+    if (pend) {
+      const { error } = await db.from("fuel_vehicles").insert({ user_id: user.id, nome_veiculo: pend.veiculo || "Meu veículo", capacidade_tanque: pend.capacidade });
+      if (error) throw error;
+      localStorage.removeItem(PENDENTE);
+    }
+
+    await carregarVeiculos();
+    if (!veiculos.length) { abrirVeiculo(null, false); return; }
+
+    const salvo = localStorage.getItem(VEICULO_ATIVO);
+    veiculoAtivoId = veiculos.some((v) => v.id === salvo) ? salvo : veiculos[0].id;
+    renderSeletor();
+    await carregarAbastecimentos();
+    renderTudo();
+    setView("app");
+  } catch (err) {
+    $("authMsg").textContent = "Erro ao carregar seus dados: " + err.message;
+    setView("auth");
+  }
+}
+
+db?.auth.onAuthStateChange((_evento, session) => carregarSessao(session));
+
+async function carregarVeiculos() {
+  const { data, error } = await db.from("fuel_vehicles").select("id,nome_veiculo,capacidade_tanque").eq("user_id", user.id).order("created_at", { ascending: true });
+  if (error) throw error;
+  veiculos = data || [];
+  renderSeletor();
+}
+
+async function carregarAbastecimentos() {
+  abastecimentos = [];
+  if (!veiculoAtivoId) return;
+  const { data, error } = await db.from("fuel_refuels").select("*").eq("vehicle_id", veiculoAtivoId).order("odometro", { ascending: true });
+  if (error) throw error;
+  abastecimentos = data || [];
+}
+
+function renderSeletor() {
+  const opcoes = veiculos.map((v) => `<option value="${v.id}">${esc(v.nome_veiculo)}</option>`).join("");
+  for (const id of ["seletorVeiculo", "seletorLancamento"]) {
+    $(id).innerHTML = opcoes;
+    if (veiculoAtivoId) $(id).value = veiculoAtivoId;
+  }
+}
+
+function salvarAtivo() {
+  localStorage.setItem(VEICULO_ATIVO, veiculoAtivoId);
+}
+
+// Seletor do cabeçalho e seletor do diálogo controlam o mesmo veículo ativo.
+async function trocarVeiculo(id) {
+  veiculoAtivoId = id;
+  salvarAtivo();
+  renderSeletor();
+  await carregarAbastecimentos();
+  renderTudo();
+}
+
+$("seletorVeiculo").onchange = (e) => trocarVeiculo(e.target.value);
+$("seletorLancamento").onchange = (e) => trocarVeiculo(e.target.value);
+
+/* ---------- Cadastro de veículos ---------- */
+
+// veiculo = null -> novo; senão, edição do veículo informado.
+function abrirVeiculo(veiculo, podeVoltar) {
+  $("perfilTitulo").textContent = veiculo ? "Editar veículo" : "Novo veículo";
+  $("veiculoId").value = veiculo?.id || "";
+  $("veiculo").value = veiculo?.nome_veiculo || "";
+  $("capacidade").value = veiculo?.capacidade_tanque || "";
+  $("profileCancel").classList.toggle("hidden", !podeVoltar);
+  $("excluirVeiculo").classList.toggle("hidden", !veiculo);
+  $("profileMsg").textContent = "";
+  setView("profile");
+}
+
+$("novoVeiculoBtn").onclick = () => abrirVeiculo(null, true);
+$("editarBtn").onclick = () => abrirVeiculo(veiculoAtual(), true);
+$("profileCancel").onclick = () => setView("app");
+
+$("profileForm").onsubmit = async (e) => {
+  e.preventDefault();
+  const id = $("veiculoId").value;
+  const dados = {
+    user_id: user.id,
+    nome_veiculo: $("veiculo").value.trim(),
+    capacidade_tanque: Number($("capacidade").value),
+  };
+  const consulta = id
+    ? db.from("fuel_vehicles").update(dados).eq("id", id).select("id").single()
+    : db.from("fuel_vehicles").insert(dados).select("id").single();
+  const { data, error } = await consulta;
+  if (error) { $("profileMsg").textContent = error.message; return; }
+
+  await carregarVeiculos();
+  veiculoAtivoId = data.id;
+  salvarAtivo();
+  await carregarAbastecimentos();
+  renderSeletor();
+  renderTudo();
+  setView("app");
+};
+
+$("excluirVeiculo").onclick = async () => {
+  const id = $("veiculoId").value;
+  if (!id) return;
+  if (!confirm("Excluir este veículo e todos os seus abastecimentos? Essa ação não pode ser desfeita.")) return;
+  const { error } = await db.from("fuel_vehicles").delete().eq("id", id);
+  if (error) { $("profileMsg").textContent = error.message; return; }
+
+  await carregarVeiculos();
+  if (!veiculos.length) { veiculoAtivoId = null; abrirVeiculo(null, false); return; }
+  veiculoAtivoId = veiculos[0].id;
+  salvarAtivo();
+  await carregarAbastecimentos();
+  renderSeletor();
+  renderTudo();
+  setView("app");
+};
+
+/* ---------- Cálculo ---------- */
+
+// Consumo = km rodados desde o abastecimento anterior ÷ litros deste abastecimento.
+// Autonomia = consumo × capacidade do tanque (assume que o tanque foi completado em cada abastecimento).
+// Custo por km = valor pago ÷ km rodados desde o abastecimento anterior.
+function calcular(lista, capacidade) {
+  return lista.map((r, i) => {
+    const anterior = lista[i - 1];
+    const km = anterior ? Number(r.odometro) - Number(anterior.odometro) : null;
+    const consumo = km > 0 && r.litros ? km / Number(r.litros) : null;
+    const autonomia = consumo ? consumo * capacidade : null;
+    const custoKm = km > 0 ? Number(r.valor_total) / km : null;
+    return { ...r, km, consumo, autonomia, custoKm };
+  });
+}
+
+function gastoPorMes(lista) {
+  const mapa = {};
+  lista.forEach((r) => {
+    const k = r.data.slice(0, 7);
+    mapa[k] = (mapa[k] || 0) + Number(r.valor_total);
+  });
+  const chaves = Object.keys(mapa).sort();
+  return {
+    labels: chaves.map((k) => { const [ano, mes] = k.split("-"); return `${mes}/${ano.slice(2)}`; }),
+    valores: chaves.map((k) => mapa[k]),
+  };
+}
+
+/* ---------- Visual ---------- */
+
+// Paleta do skill dataviz (referência): categóricas em ordem fixa; magnitude em azul.
+function temaGrafico() {
+  const escuro = window.matchMedia("(prefers-color-scheme: dark)").matches;
+  return escuro
+    ? { series: ["#3987e5", "#d95926", "#199e70", "#c98500"], primaria: "#3987e5", texto: "#c3c2b7", grade: "#2c2c2a", superficie: "#1a1a19" }
+    : { series: ["#2a78d6", "#eb6834", "#1baf7a", "#eda100"], primaria: "#2a78d6", texto: "#52514e", grade: "#e1e0d9", superficie: "#fcfcfb" };
+}
+
+function mostrarGrafico(canvasId, vazioId, temDados) {
+  $(canvasId).classList.toggle("hidden", !temDados);
+  $(vazioId).classList.toggle("hidden", temDados);
+}
+
+function criarGrafico(id, config) {
+  if (graficos[id]) graficos[id].destroy();
+  graficos[id] = new Chart($(id), config);
+}
+
+function opcoesBase(t, extras = {}) {
+  return {
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: { mode: "index", intersect: false },
+    plugins: { legend: { display: false }, tooltip: { padding: 10, cornerRadius: 8 } },
+    scales: {
+      x: { grid: { display: false }, ticks: { color: t.texto } },
+      y: { beginAtZero: true, grid: { color: t.grade }, ticks: { color: t.texto }, border: { display: false } },
+    },
+    ...extras,
+  };
+}
+
+function desenharGraficos(lista) {
+  if (typeof Chart === "undefined") return;
+  const t = temaGrafico();
+  Chart.defaults.color = t.texto;
+  Chart.defaults.font.family = 'system-ui, -apple-system, "Segoe UI", sans-serif';
+
+  // Autonomia por abastecimento (linha, um eixo)
+  const comAut = lista.filter((r) => r.autonomia);
+  mostrarGrafico("cAutonomia", "vAutonomia", comAut.length >= 2);
+  if (comAut.length >= 2) {
+    criarGrafico("cAutonomia", {
+      type: "line",
+      data: {
+        labels: comAut.map((r) => formatarData(r.data).slice(0, 5)),
+        datasets: [{
+          label: "Autonomia (km)",
+          data: comAut.map((r) => r.autonomia),
+          borderColor: t.primaria,
+          backgroundColor: t.primaria + "22",
+          fill: true,
+          tension: 0.3,
+          pointRadius: 4,
+          pointHoverRadius: 6,
+        }],
+      },
+      options: opcoesBase(t, {
+        plugins: { legend: { display: false }, tooltip: { callbacks: { label: (c) => `${fmt(c.parsed.y, 0)} km` } } },
+      }),
+    });
+  }
+
+  // Consumo por abastecimento (barras)
+  const comCons = lista.filter((r) => r.consumo);
+  mostrarGrafico("cConsumo", "vConsumo", comCons.length > 0);
+  if (comCons.length) {
+    criarGrafico("cConsumo", {
+      type: "bar",
+      data: {
+        labels: comCons.map((r) => formatarData(r.data).slice(0, 5)),
+        datasets: [{
+          label: "km/L",
+          data: comCons.map((r) => r.consumo),
+          backgroundColor: t.primaria,
+          borderRadius: 6,
+          maxBarThickness: 40,
+        }],
+      },
+      options: opcoesBase(t, {
+        plugins: { legend: { display: false }, tooltip: { callbacks: { label: (c) => `${fmt(c.parsed.y, 2)} km/L` } } },
+      }),
+    });
+  }
+
+  // Gasto por mês (barras, R$)
+  const mensal = gastoPorMes(lista);
+  mostrarGrafico("cMensal", "vMensal", mensal.valores.length > 0);
+  if (mensal.valores.length) {
+    criarGrafico("cMensal", {
+      type: "bar",
+      data: {
+        labels: mensal.labels,
+        datasets: [{ label: "Gasto (R$)", data: mensal.valores, backgroundColor: t.primaria, borderRadius: 6, maxBarThickness: 40 }],
+      },
+      options: opcoesBase(t, {
+        scales: {
+          x: { grid: { display: false }, ticks: { color: t.texto } },
+          y: { beginAtZero: true, grid: { color: t.grade }, ticks: { color: t.texto, callback: (v) => brl(v) }, border: { display: false } },
+        },
+        plugins: { legend: { display: false }, tooltip: { callbacks: { label: (c) => brl(c.parsed.y) } } },
+      }),
+    });
+  }
+
+  // Gasto por combustível (rosca, ordem fixa das categorias)
+  const porComb = COMBUSTIVEIS.map((nome) => lista.filter((r) => r.combustivel === nome).reduce((s, r) => s + Number(r.valor_total), 0));
+  const temComb = porComb.some((v) => v > 0);
+  mostrarGrafico("cCombustivel", "vCombustivel", temComb);
+  if (temComb) {
+    criarGrafico("cCombustivel", {
+      type: "doughnut",
+      data: {
+        labels: COMBUSTIVEIS,
+        datasets: [{ data: porComb, backgroundColor: t.series, borderColor: t.superficie, borderWidth: 2 }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: "62%",
+        plugins: {
+          legend: { position: "bottom", labels: { color: t.texto, usePointStyle: true, padding: 14 } },
+          tooltip: { callbacks: { label: (c) => `${c.label}: ${brl(c.parsed)}` } },
+        },
+      },
+    });
+  }
+}
+
+function renderIndicadores(lista, cap) {
+  const comAut = lista.filter((r) => r.autonomia);
+  const autonomias = comAut.map((r) => r.autonomia);
+  const consumos = lista.filter((r) => r.consumo).map((r) => r.consumo);
+  const custos = lista.filter((r) => r.custoKm).map((r) => r.custoKm);
+  const ultimo = comAut[comAut.length - 1];
+  const anteriores = comAut.slice(0, -1).map((r) => r.autonomia);
+  const mediaAut = media(autonomias);
+  const melhor = autonomias.length ? Math.max(...autonomias) : null;
+
+  // Destaque
+  $("heroAut").innerHTML = mediaAut ? `${fmt(mediaAut, 0)}<small>km</small>` : "—";
+  $("heroCap").textContent = `Tanque: ${fmt(cap)} L`;
+  if (ultimo && anteriores.length) {
+    const mediaAnt = media(anteriores);
+    const diff = ((ultimo.autonomia - mediaAnt) / mediaAnt) * 100;
+    const subiu = diff >= 0;
+    const chip = $("heroDelta");
+    chip.className = "chip " + (Math.abs(diff) < 1 ? "neutro" : subiu ? "bom" : "ruim");
+    chip.textContent = Math.abs(diff) < 1
+      ? "= Último abastecimento na média"
+      : `${subiu ? "▲" : "▼"} ${fmt(Math.abs(diff), 0)}% ${subiu ? "acima" : "abaixo"} da média anterior`;
+  } else {
+    $("heroDelta").className = "chip neutro";
+    $("heroDelta").textContent = autonomias.length ? "Registre mais um abastecimento para comparar" : "Registre abastecimentos com litros para ver a autonomia";
+  }
+  const pct = ultimo && melhor ? Math.round((ultimo.autonomia / melhor) * 100) : 0;
+  $("heroBarra").style.width = pct + "%";
+  $("heroBarraLegenda").textContent = ultimo
+    ? `Último abastecimento: ${fmt(ultimo.autonomia, 0)} km (${pct}% da melhor autonomia, ${fmt(melhor, 0)} km)`
+    : "";
+
+  // Indicadores
+  $("kMelhor").textContent = melhor ? `${fmt(melhor, 0)} km` : "—";
+  $("kConsumo").textContent = consumos.length ? fmt(media(consumos), 2) : "—";
+  $("kCustoKm").textContent = custos.length ? brl(media(custos)) : "—";
+
+  const agora = hoje().slice(0, 7);
+  const gastoMes = lista.filter((r) => r.data.slice(0, 7) === agora).reduce((s, r) => s + Number(r.valor_total), 0);
+  $("kMes").textContent = brl(gastoMes);
+  $("kTotal").textContent = brl(lista.reduce((s, r) => s + Number(r.valor_total), 0));
+
+  const kmTotal = lista.length > 1 ? Number(lista[lista.length - 1].odometro) - Number(lista[0].odometro) : 0;
+  $("kKm").textContent = kmTotal ? `${fmt(kmTotal, 0)} km` : "—";
+}
+
+/* ---------- Comparativo por combustível ---------- */
+
+// Médias por tipo de combustível. Melhor = maior km/L (e autonomia) e menor custo por km.
+function renderComparativo(lista, cap) {
+  const linhas = COMBUSTIVEIS.map((nome) => {
+    const dos = lista.filter((r) => r.combustivel === nome);
+    const consumo = media(dos.filter((r) => r.consumo).map((r) => r.consumo));
+    return {
+      nome,
+      abastecimentos: dos.length,
+      consumo,
+      autonomia: consumo ? consumo * cap : null,
+      custoKm: media(dos.filter((r) => r.custoKm).map((r) => r.custoKm)),
+    };
+  }).filter((l) => l.abastecimentos);
+
+  const comConsumo = linhas.filter((l) => l.consumo);
+  const comCusto = linhas.filter((l) => l.custoKm);
+  const melhorConsumo = comConsumo.reduce((m, l) => (!m || l.consumo > m.consumo ? l : m), null);
+  const melhorCusto = comCusto.reduce((m, l) => (!m || l.custoKm < m.custoKm ? l : m), null);
+
+  let recomendacao = "Registre abastecimentos de pelo menos dois tipos de combustível para comparar.";
+  if (linhas.length >= 2 && melhorConsumo && melhorCusto) {
+    recomendacao = melhorConsumo === melhorCusto
+      ? `${melhorCusto.nome} é o mais vantajoso: menor custo por km (${brl(melhorCusto.custoKm)}) e maior consumo (${fmt(melhorConsumo.consumo, 2)} km/L).`
+      : `Menor custo por km: ${melhorCusto.nome} (${brl(melhorCusto.custoKm)}). Maior consumo: ${melhorConsumo.nome} (${fmt(melhorConsumo.consumo, 2)} km/L).`;
+  }
+  $("recomendacaoComb").textContent = recomendacao;
+
+  $("comparativoComb").innerHTML = linhas.map((l) => `
+    <tr>
+      <td>${esc(l.nome)}</td>
+      <td class="num">${l.abastecimentos}</td>
+      <td class="num ${l === melhorConsumo ? "melhor" : ""}">${l.consumo ? fmt(l.consumo, 2) : "—"}</td>
+      <td class="num ${l === melhorConsumo ? "melhor" : ""}">${l.autonomia ? `${fmt(l.autonomia, 0)} km` : "—"}</td>
+      <td class="num ${l === melhorCusto ? "melhor" : ""}">${l.custoKm ? brl(l.custoKm) : "—"}</td>
+    </tr>`).join("");
+}
+
+function renderTudo() {
+  const veiculo = veiculoAtual();
+  if (!veiculo) return;
+  const cap = Number(veiculo.capacidade_tanque);
+  const lista = calcular(abastecimentos, cap);
+
+  renderIndicadores(lista, cap);
+  renderComparativo(lista, cap);
+  desenharGraficos(lista);
+
+  $("semRegistros").classList.toggle("hidden", lista.length > 0);
+  $("historico").innerHTML = [...lista].reverse().map((r) => `
+    <tr>
+      <td>${formatarData(r.data)}</td>
+      <td>${esc(r.combustivel)}</td>
+      <td class="num">${r.litros ? fmt(r.litros, 2) : "—"}</td>
+      <td class="num">${fmt(r.odometro, 0)}</td>
+      <td class="num">${r.consumo ? fmt(r.consumo, 2) : "—"}</td>
+      <td class="num">${r.autonomia ? fmt(r.autonomia, 0) + " km" : "—"}</td>
+      <td class="acoes-linha"><button type="button" class="link" data-edit="${r.id}">Editar</button> <button type="button" class="link perigo-link" data-del="${r.id}">Excluir</button></td>
+    </tr>`).join("");
+}
+
+/* ---------- Abastecimentos ---------- */
+
+function litrosPrevistos() {
+  const valor = Number($("valor").value);
+  const preco = Number($("precoLitro").value);
+  return valor > 0 && preco > 0 ? valor / preco : null;
+}
+
+function atualizarLitros() {
+  const l = litrosPrevistos();
+  $("litrosCalc").textContent = l && !$("litros").value ? `Litros calculados: ${fmt(l, 2)}` : "";
+}
+$("valor").oninput = atualizarLitros;
+$("precoLitro").oninput = atualizarLitros;
+$("litros").oninput = atualizarLitros;
+
+// editandoId = null -> novo abastecimento; senão, edição do registro informado.
+let editandoId = null;
+
+$("refuelForm").onsubmit = async (e) => {
+  e.preventDefault();
+  $("refuelMsg").textContent = "";
+  if (!veiculoAtivoId) { $("refuelMsg").textContent = "Cadastre um veículo antes de registrar abastecimentos."; return; }
+  const valor = Number($("valor").value);
+  const precoInformado = Number($("precoLitro").value) || null;
+  const litrosInformados = Number($("litros").value) || null;
+  const odo = Number($("odometro").value);
+  const litros = litrosInformados || (precoInformado && valor ? valor / precoInformado : null);
+
+  // Na edição, o próprio registro não entra na comparação do odômetro.
+  // O odômetro deve ficar entre o abastecimento anterior e o seguinte, pela data (permite lançar registros retroativos).
+  const data = $("data").value;
+  const outros = abastecimentos.filter((r) => r.id !== editandoId);
+  const anterior = outros.filter((r) => r.data <= data).reduce((m, r) => (!m || Number(r.odometro) > Number(m.odometro) ? r : m), null);
+  const seguinte = outros.filter((r) => r.data > data).reduce((m, r) => (!m || Number(r.odometro) < Number(m.odometro) ? r : m), null);
+  if (anterior && odo <= Number(anterior.odometro)) {
+    $("refuelMsg").textContent = `O odômetro precisa ser maior que ${fmt(anterior.odometro, 0)} km (abastecimento de ${formatarData(anterior.data)}).`;
+    return;
+  }
+  if (seguinte && odo >= Number(seguinte.odometro)) {
+    $("refuelMsg").textContent = `O odômetro precisa ser menor que ${fmt(seguinte.odometro, 0)} km (abastecimento de ${formatarData(seguinte.data)}).`;
+    return;
+  }
+
+  const dados = {
+    data: $("data").value,
+    combustivel: $("combustivel").value,
+    valor_total: valor,
+    preco_litro: precoInformado,
+    litros: litros ? Number(litros.toFixed(3)) : null,
+    odometro: odo,
+  };
+  const consulta = editandoId
+    ? db.from("fuel_refuels").update(dados).eq("id", editandoId)
+    : db.from("fuel_refuels").insert({ ...dados, user_id: user.id, vehicle_id: veiculoAtivoId });
+  const { error } = await consulta;
+  if (error) { $("refuelMsg").textContent = error.message; return; }
+
+  e.target.reset();
+  $("data").value = hoje();
+  renderSeletor();
+  atualizarLitros();
+  await carregarAbastecimentos();
+  renderTudo();
+  $("dlgAbastecimento").close();
+};
+
+function prepararDialogo(registro) {
+  editandoId = registro?.id || null;
+  $("refuelMsg").textContent = "";
+  $("refuelId").value = editandoId || "";
+  $("tituloAbastecimento").textContent = editandoId ? "Editar abastecimento" : "Novo abastecimento";
+  $("salvarAbastecimento").textContent = editandoId ? "Salvar alterações" : "Salvar abastecimento";
+  // Na edição, o abastecimento permanece no veículo em que foi registrado.
+  $("seletorLancamento").disabled = Boolean(editandoId);
+  renderSeletor();
+  if (registro) {
+    $("data").value = registro.data;
+    $("combustivel").value = registro.combustivel;
+    $("valor").value = registro.valor_total;
+    $("precoLitro").value = registro.preco_litro ?? "";
+    $("litros").value = registro.litros ?? "";
+    $("odometro").value = registro.odometro;
+  } else {
+    $("refuelForm").reset();
+    $("data").value = hoje();
+  }
+  atualizarLitros();
+}
+
+function abrirLancamento() {
+  prepararDialogo(null);
+  $("dlgAbastecimento").showModal();
+}
+$("abrirLancamento").onclick = abrirLancamento;
+$("abrirHistorico").onclick = () => $("dlgHistorico").showModal();
+$("fecharHistorico").onclick = () => $("dlgHistorico").close();
+$("cancelarLancamento").onclick = () => $("dlgAbastecimento").close();
+$("dlgAbastecimento").addEventListener("close", () => { editandoId = null; $("seletorLancamento").disabled = false; });
+
+$("historico").onclick = async (e) => {
+  const editar = e.target.dataset.edit;
+  if (editar) {
+    prepararDialogo(abastecimentos.find((r) => r.id === editar));
+    $("dlgAbastecimento").showModal();
+    return;
+  }
+  const id = e.target.dataset.del;
+  if (!id || !confirm("Excluir este abastecimento?")) return;
+  const { error } = await db.from("fuel_refuels").delete().eq("id", id);
+  if (error) { alert(error.message); return; }
+  await carregarAbastecimentos();
+  renderTudo();
+};
+
+/* ---------- Inicialização ---------- */
+
+$("data").value = hoje();
+setModo(false);
+if (!configOk) {
+  $("configAlert").classList.remove("hidden");
+  setView("auth");
+  $("authBtn").disabled = true;
+  $("loginGoogle").disabled = true;
+}
+if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
+  navigator.serviceWorker.register("sw.js", { updateViaCache: "none" }).catch(() => {});
+}
+</script>
+</body>
+</html>
